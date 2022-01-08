@@ -1,0 +1,120 @@
+---
+title: "analysisInfantMortality"
+author: "Rachel Griffard"
+date: "12/10/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Libraries
+```{r library}
+library(mice)
+library(VIM)
+library(naniar)
+library(QuantPsyc)
+library(psych)
+library(tidyverse)
+library(Hmisc)
+```
+
+Import full data frames
+```{r Import Full Datasets}
+IM<-readr::read_csv("../data/Infant_Mortality.csv")
+stzIM<-readr::read_csv("../data/stzInfant_Mortality.csv")
+```
+
+```{r Correlation}
+IMdf <- as.data.frame(IM)
+as.integer(IMdf$AverageAlcoholConsumption)
+as.integer(IMdf$Mortality)
+as.integer(IMdf$AverageAgeofMotherBirth)
+as.integer(IMdf$AvgCigaretteSmoking)
+as.integer(IMdf$CountryGDPSpentonHealthcare)
+as.integer(IMdf$HealthcareLegislation)
+as.integer(IMdf$AccesstoANYContraceptiveMethod)
+as.integer(IMdf$HighTemperaturebyCountry)
+as.integer(IMdf$NegAbort)
+as.integer(IMdf$PosAbort)
+y <- IMdf[3:11]
+x<-IMdf$Mortality
+
+cor(x, y, use="pairwise.complete.obs")
+
+y <- IMdf[2:11]
+x<-IMdf$HealthcareLegislation
+
+cor(x, y, use="pairwise.complete.obs")
+
+as.factor(IM$NegAbort)
+```
+
+
+
+
+
+Imputation Testing
+```{r Imputation Testing}
+sum(is.na(IM))
+mean(is.na(IM))
+colMeans(is.na(IM))
+```
+
+14% missing data
+Highest missing data column is 75%, imputations ~75 times to account
+|  -Figure out how to do imputations is amount missing data, would rather do highest amount of missing data for average age of mother
+
+Testing for randomness
+```{r Randomness}
+md.pattern(IM)
+aggr(IM, prop = T, numbers = T)
+vis_miss(IM)
+```
+Data is missing completely at Random(MCAR) based on the visual and summary analysess above.
+
+Imputation
+```{r Imputation}
+imp <- mice(IM, m=75)
+```
+
+
+
+Model Creation
+```{r Model Creation}
+fit1 <- with(imp, lm(Mortality ~ AverageAlcoholConsumption + AverageAgeofMotherBirth + AvgCigaretteSmoking))
+fit2 <- with(imp, lm(Mortality ~ AverageAlcoholConsumption + AverageAgeofMotherBirth + AvgCigaretteSmoking + AccesstoANYContraceptiveMethod))
+fit3 <- with(imp, lm(Mortality ~ AverageAlcoholConsumption + AverageAgeofMotherBirth + AvgCigaretteSmoking + AccesstoANYContraceptiveMethod + CountryGDPSpentonHealthcare))
+fit4 <- with(imp, lm(Mortality ~ AverageAlcoholConsumption + AverageAgeofMotherBirth + AvgCigaretteSmoking + AccesstoANYContraceptiveMethod + CountryGDPSpentonHealthcare + HealthcareLegislation))
+fit5p <- with(imp, lm(Mortality ~ AverageAlcoholConsumption + AverageAgeofMotherBirth + AvgCigaretteSmoking + AccesstoANYContraceptiveMethod + CountryGDPSpentonHealthcare + HealthcareLegislation + ReprodAct + Guideline + EML))
+fit5n <- with(imp, lm(Mortality ~ AverageAlcoholConsumption + AverageAgeofMotherBirth + AvgCigaretteSmoking + AccesstoANYContraceptiveMethod + CountryGDPSpentonHealthcare + HealthcareLegislation + PenalCode))
+
+pool1 <- pool(fit1)
+pool2 <- pool(fit2)
+pool3 <- pool(fit3)
+pool4 <- pool(fit4)
+pool5p <- pool(fit5p)
+pool5n <- pool(fit5n)
+```
+
+Results
+```{r Results}
+summary(pool1)
+summary(pool2)
+summary(pool3)
+summary(pool4)
+summary(pool5n)
+summary(pool5p)
+```
+
+Percent Variance Explained
+```{r Percent Variance Explained}
+pool.r.squared(fit1, adjusted=T)
+pool.r.squared(fit2, adjusted=T)
+pool.r.squared(fit3, adjusted=T)
+pool.r.squared(fit4, adjusted=T)
+pool.r.squared(fit5p, adjusted=T)
+pool.r.squared(fit5n, adjusted=T)
+```
+
